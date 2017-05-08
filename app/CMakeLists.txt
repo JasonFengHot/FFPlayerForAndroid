@@ -45,8 +45,8 @@ find_library( # Sets the name of the path variable.
 
 target_link_libraries( # Specifies the target library.
                        native-lib
-                        /Users/huibin/AndroidProject/FFPlayer4Android/app/src/main/jniLibs/armeabi-v7a/libijkffmpeg.so
-                        /Users/huibin/AndroidProject/FFPlayer4Android/app/src/main/jniLibs/armeabi-v7a/libSDL2.so
+                       ${PROJECT_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}/libijkffmpeg.so
+                       ${PROJECT_SOURCE_DIR}/src/main/jniLibs/${ANDROID_ABI}/libSDL2.so
                        # Links the target library to the log library
                        # included in the NDK.
                        ${log-lib} )
