@@ -201,7 +201,9 @@ public class SDLActivity extends Activity {
         }
 
         mLayout = new RelativeLayout(this);
-        mLayout.addView(mSurface);
+        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(1024, 768);
+        layoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        mLayout.addView(mSurface, layoutParams);
 
         setContentView(mLayout);
         
