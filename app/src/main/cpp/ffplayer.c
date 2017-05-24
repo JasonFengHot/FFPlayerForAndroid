@@ -46,6 +46,8 @@ AVCodec *pCodec = NULL;
 
 SDL_Event event;
 
+char *filePath;
+
 /**
  * audio
  */
@@ -367,69 +369,64 @@ void audio_callback(void *userdata, Uint8 *stream, int len) {
     }
 }
 
-
-int video_thread() {
-    while (av_read_frame(pFormatCtx, &packet) >= 0) {
-        if (packet.stream_index == videoStream) {
-            int ret;
-            ret = avcodec_send_packet(pCodecCtx, &packet);
-            if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-                av_packet_unref(&packet);
-            }
-
-            ret = avcodec_receive_frame(pCodecCtx, pFrame);
-
-            if (ret < 0 && ret != AVERROR_EOF) {
-                av_packet_unref(&packet);
-            }
-
-            // Did we get a video frame?
-            if (ret == 0) {
-                AVFrame *pict = av_frame_alloc();
-                pict->data[0] = yPlane;
-                pict->data[1] = uPlane;
-                pict->data[2] = vPlane;
-                pict->linesize[0] = pCodecCtx->width;
-                pict->linesize[1] = uvPitch;
-                pict->linesize[2] = uvPitch;
-
-                // Convert the image into YUV format that SDL uses
-                sws_scale(sws_ctx, (uint8_t const *const *) pFrame->data,
-                          pFrame->linesize, 0, pCodecCtx->height, pict->data,
-                          pict->linesize);
-
-                LOGD("video_thread");
-                event.type = FF_REFRESH_EVENT;
-                SDL_PushEvent(&event);
-            }
-        } else if (packet.stream_index == audioStream) {
-            packet_queue_put(&audioq, &packet);
-        }
+void video_thread() {
+    int ret;
+    ret = avcodec_send_packet(pCodecCtx, &packet);
+    if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
+        av_packet_unref(&packet);
     }
 
+    ret = avcodec_receive_frame(pCodecCtx, pFrame);
 
+    if (ret < 0 && ret != AVERROR_EOF) {
+        av_packet_unref(&packet);
+    }
+
+    // Did we get a video frame?
+    if (ret == 0) {
+        AVFrame *pict = av_frame_alloc();
+        pict->data[0] = yPlane;
+        pict->data[1] = uPlane;
+        pict->data[2] = vPlane;
+        pict->linesize[0] = pCodecCtx->width;
+        pict->linesize[1] = uvPitch;
+        pict->linesize[2] = uvPitch;
+
+        // Convert the image into YUV format that SDL uses
+        sws_scale(sws_ctx, (uint8_t const *const *) pFrame->data,
+                  pFrame->linesize, 0, pCodecCtx->height, pict->data,
+                  pict->linesize);
+
+        LOGD("video_thread");
+        event.type = FF_REFRESH_EVENT;
+        SDL_PushEvent(&event);
+    }
+}
+
+
+void audio_thread() {
+
+    packet_queue_put(&audioq, &packet);
+}
+
+
+int decode_thread() {
+    while (av_read_frame(pFormatCtx, &packet) >= 0) {
+        if (packet.stream_index == videoStream) {
+            video_thread();
+//            SDL_CreateThread(video_thread, "video_thread", NULL);
+        } else if (packet.stream_index == audioStream) {
+            audio_thread();
+        }
+    }
     event.type = FF_QUIT_EVENT;
     SDL_PushEvent(&event);
 }
 
-int audio_thread() {
 
-}
-
-
-int ffplay(char *path) {
-
-
-    // Register all formats and codecs
-    av_register_all();
-
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
-        LOGE("Could not initialize SDL - %s\n", SDL_GetError());
-        exit(1);
-    }
-
+int init_thread() {
     // Open video file
-    if (avformat_open_input(&pFormatCtx, path, NULL, NULL) != 0)
+    if (avformat_open_input(&pFormatCtx, filePath, NULL, NULL) != 0)
         return -1; // Couldn't open file
 
     // Retrieve stream information
@@ -437,7 +434,7 @@ int ffplay(char *path) {
         return -1; // Couldn't find stream information
 
     // Dump information about file onto standard error
-    av_dump_format(pFormatCtx, 0, path, 0);
+    av_dump_format(pFormatCtx, 0, filePath, 0);
 
     // Find the first video stream
     videoStream = -1;
@@ -578,7 +575,25 @@ int ffplay(char *path) {
     }
 
     uvPitch = pCodecCtx->width / 2;
-    SDL_CreateThread(video_thread, "video_thread", NULL);
+    SDL_CreateThread(decode_thread, "video_thread", NULL);
+
+
+}
+
+int ffplay(char *path) {
+
+    filePath = path;
+
+    // Register all formats and codecs
+    av_register_all();
+
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
+        LOGE("Could not initialize SDL - %s\n", SDL_GetError());
+        exit(1);
+    }
+
+    init_thread();
+//    SDL_CreateThread(decode_thread, "decode_thread", NULL);
 
     for (;;) {
         SDL_WaitEvent(&event);
