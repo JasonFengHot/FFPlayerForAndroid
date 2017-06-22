@@ -23,15 +23,22 @@
  * simple media player based on the FFmpeg libraries
  */
 
+#include "config.h"
 #include <inttypes.h>
 #include <math.h>
+#include <limits.h>
 #include <signal.h>
+#include <stdint.h>
 
 #include "libavutil/avstring.h"
 #include "libavutil/eval.h"
+#include "libavutil/mathematics.h"
 #include "libavutil/pixdesc.h"
+#include "libavutil/imgutils.h"
 #include "libavutil/dict.h"
+#include "libavutil/parseutils.h"
 #include "libavutil/samplefmt.h"
+#include "libavutil/avassert.h"
 #include "libavutil/time.h"
 #include "libavformat/avformat.h"
 #include "libavdevice/avdevice.h"
@@ -47,8 +54,11 @@
 #endif
 
 #include <SDL.h>
+#include <SDL_thread.h>
 
 #include "cmdutils.h"
+
+#include <assert.h>
 
 const char program_name[] = "ffplay";
 const int program_birth_year = 2003;
