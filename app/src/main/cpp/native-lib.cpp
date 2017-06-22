@@ -162,7 +162,9 @@ Java_org_libsdl_app_SDLActivity_nativeInit(JNIEnv *env, jclass cls, jobjectArray
 
 //    status = SDL_main(argc, argv);
 
-    ffplay("/sdcard/Daisy/chinesemovie_0.mp4");
+    char *path1 = "/sdcard/Daisy/chinesemovie_0.mp4";
+    char *path2 = "http://114.80.117.173/qyrrs?url=http%3A%2F%2Fvdata.tvxio.com%2Fcdn%2F0%2F1f%2F20170323%2Fdf845611c7418f9c80a999eee6e8ae%2FH264%2Fhigh%2Fslice%2F14858_1.m3u8&quality=high&sn=go_grf7qt3h&clipid=1785703&sid=a4d3146858734a9c8fe35625e515f3723&sign=abfda0ef5177de62bbe610935e7147d3&ne=1&clip=1";
+    ffplay(path2);
 
     /* Release the arguments. */
 

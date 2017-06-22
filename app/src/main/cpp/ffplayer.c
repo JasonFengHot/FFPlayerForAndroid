@@ -369,7 +369,7 @@ void audio_callback(void *userdata, Uint8 *stream, int len) {
     }
 }
 
-void video_thread() {
+int video_thread() {
     int ret;
     ret = avcodec_send_packet(pCodecCtx, &packet);
     if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
@@ -397,10 +397,11 @@ void video_thread() {
                   pFrame->linesize, 0, pCodecCtx->height, pict->data,
                   pict->linesize);
 
-        LOGD("video_thread");
         event.type = FF_REFRESH_EVENT;
         SDL_PushEvent(&event);
     }
+
+    return 0;
 }
 
 
@@ -575,9 +576,7 @@ int init_thread() {
     }
 
     uvPitch = pCodecCtx->width / 2;
-    SDL_CreateThread(decode_thread, "video_thread", NULL);
-
-
+    SDL_CreateThread(decode_thread, "decode_thread", NULL);
 }
 
 int ffplay(char *path) {
@@ -586,6 +585,7 @@ int ffplay(char *path) {
 
     // Register all formats and codecs
     av_register_all();
+    avformat_network_init();
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)) {
         LOGE("Could not initialize SDL - %s\n", SDL_GetError());
